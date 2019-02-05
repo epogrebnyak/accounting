@@ -1,11 +1,15 @@
 """Minimal double-entry accounting example with 
    T-accounts, legder and transaction catalog.
 """
-DEBIT_ACCOUNTS = ['cash', 'inventory', 'cost of goods sold'] 
-CREDIT_ACCOUNTS = ['capital', 'sales']
+
+from tabulate import tabulate
+ACCOUNT_NAMES = dict(asset=['cash', 'inventory'], 
+                     equity=['capital'], 
+                     income=['sales'], 
+                     expense=['cogs'])
 OPERATIONS = {"pay in capital": ("cash", "capital"),
               "buy goods": ("inventory", "cash"),
-              "ship goods": ("cost of goods sold", "inventory"),
+              "ship goods": ("cogs", "inventory"),
               "get payment": ("cash", "sales")
               }   
 
@@ -47,14 +51,44 @@ class CreditAccount(Account):
         
     @property
     def balance(self):
-        return -self._debit_balance()   
+        return -1 * self._debit_balance()   
 
-def init_accounts(debit_names=DEBIT_ACCOUNTS, 
-                  credit_names=CREDIT_ACCOUNTS):
-    ac1 = [DebitAccount(name) for name in debit_names]                  
-    ac2 = [CreditAccount(name) for name in credit_names]                  
-    return {a.name:a for a in ac1+ac2}
+class BalanceSheet:
+    pass
 
+class Asset(DebitAccount, BalanceSheet):
+    pass
+        
+class Equity(CreditAccount, BalanceSheet):
+    pass
+
+class Liability(CreditAccount, BalanceSheet):
+    pass
+        
+class Expense(DebitAccount):
+    pass
+
+class Income(CreditAccount):
+    pass
+
+class Profit(Equity):
+    pass
+
+CLASS_CONSTRUCTORS = dict(asset=Asset,
+                          equity=Equity,
+                          liability=Liability,
+                          expense=Expense,
+                          income=Income,
+                          profit=Profit)
+
+def make_instance(keyword, account_name):
+    return CLASS_CONSTRUCTORS[keyword](account_name)
+
+
+def init_accounts(account_names=ACCOUNT_NAMES):
+    return {v:make_instance(kw, v) 
+    for kw, values in account_names.items() for v in values} 
+    
 def mutate(accounts, debit_side, credit_side, amount):
     accounts[debit_side].debit(amount)
     accounts[credit_side].credit(amount)
@@ -64,49 +98,60 @@ def process(accounts, event, catalog=OPERATIONS):
     action_name, amount = event
     acc1, acc2 = catalog[action_name]
     return mutate(accounts, acc1, acc2 , amount)
-
-class Company:
-    def __init__(self, name, accounts=None, transaction_catalog=OPERATIONS):
-        self.name = name
-        if accounts is None:
-            self.dict = init_accounts()
-        else:    
-            self.accounts = accounts
-        self.catalog = transaction_catalog
-        
-    def record(self, action_name, amount):
-        try:
-            acc1, acc2 = self.catalog[action_name]
-            self.dict = mutate(self.dict, acc1, acc2, amount)
-        except KeyError:
-            raise ValueError('Unknown operation: ' + action_name) 
-            
        
-# reference functions       
-        
-def profit(accounts):
-    return accounts['sales'].balance - accounts['cost of goods sold'].balance  
+# Reference functions 
 
-def list_accounts_by_type(accounts, cls):
+def profit(accounts):
+    return account_sum(accounts, Income) - account_sum(accounts, Expense)
+
+def account_list(accounts):
+    return accounts.values()
+
+def account_list_by_type(accounts, cls):
     return [a for a in accounts.values() if isinstance(a, cls)]
 
-def debit_accounts(accounts):
-    return list_accounts_by_type(accounts, cls=DebitAccount)
-
-def credit_accounts(accounts):
-    return list_accounts_by_type(accounts, cls=CreditAccount)
+def account_dict_by_type(accounts, cls):
+    return {k:a for (k,a) in accounts.items() if isinstance(a, cls)}
 
 def total(accounts_list):
     return sum(map(lambda x: x.balance, accounts_list))
 
-def gross_asset_total(accounts):
-    return total(debit_accounts(accounts))
-    
-def gross_el_total(accounts):
-    return total(credit_accounts(accounts))
+def account_sum(accounts, cls):
+    return total(account_list_by_type(accounts, cls))
 
-def values(accounts):
-    return {k:v.balance for k,v in accounts.items()}
+def has_identity(accounts):    
+    return account_sum(accounts, DebitAccount) == \
+           account_sum(accounts, CreditAccount)
+
+def values_dict(accounts):
+    return {k: v.balance for k,v in accounts.items()}
+
+def balance_sheet(accounts):
+    _accounts = accounts.copy()
+    p = Profit('profit', profit(_accounts))
+    _accounts['profit'] = p
+    return account_dict_by_type(_accounts, BalanceSheet)
+
+def balance_dict(accounts):
+    b = balance_sheet(accounts)
+    mk = lambda cls: values_dict(account_dict_by_type(b, cls))
+    return dict(assets=mk(Asset), 
+                equity=mk(Equity),
+                liabilities=mk(Liability))
+
+def balance_table_items(accounts):
+    bd = balance_dict(accounts)    
+    for key in bd.keys():
+        yield key.capitalize(), None
+        for k,v in bd[key].items():
+            yield "- "+k.capitalize(), v
+
+def print_balance(accounts):
+    from tabulate import tabulate
+    text = tabulate(balance_table_items(accounts), ("",""), "plain")
+    print(text)
+                              
+
 
 if '__main__' == __name__:            
     accounts = init_accounts()
@@ -114,28 +159,12 @@ if '__main__' == __name__:
               ("buy goods", 75), 
               ("ship goods", 50),
               ("get payment", 60)
-               ]
-    
+               ]    
     for event in events: 
         process(accounts, event)
-        assert gross_asset_total(accounts) == gross_el_total(accounts)
-        
-    print(accounts) 
-    
-    assert values(accounts) == {'capital': 100,
-     'cash': 85,
-     'cost of goods sold': 50,
-     'inventory': 25,
-     'sales': 60}
-    
+        assert has_identity(accounts)         
+    print(balance_dict(accounts)) 
+    print_balance(accounts)    
+    assert values_dict(accounts) == {'capital': 100, 'cash': 85, 'cogs': 50, 'inventory': 25, 'sales': 60}
     assert profit(accounts) == 10
-    assert gross_asset_total(accounts) == gross_el_total(accounts)
-    
-    
-    r = Company("ABC")
-    for event in events: 
-        r.record(*event)
-    print(r.dict)
-
-    assert r.dict == accounts   
-
+    assert has_identity(accounts)
