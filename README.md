@@ -141,3 +141,6 @@ Aктивы фирмы:
 Коротко:
 - [Бухгалтерский учет для программистов, 2018](https://habr.com/ru/post/410275/)
 - [Accounting for Computer Scientists, 2011](https://martin.kleppmann.com/2011/03/07/accounting-for-computer-scientists.html)
+
+Неясно:
+- [Accoutning Software Design Patterns](https://stackoverflow.com/a/163634/1758363)
