@@ -1,14 +1,13 @@
 """Minimal double-entry accounting example with 
    T-accounts, legder and accounting entries catalog.
 """
-from prettytable import PrettyTable, NONE, ALL
+import collections
+import itertools 
 
 class Account:
     def __init__(self, name, start_balance=0):
-        if start_balance != 0:
-            raise NotImplementedError("Use DebitAccount or CreditAccount")
         self.name = name
-        self.debits = []
+        self.debits = [start_balance]
         self.credits = []
 
     def debit(self, x):
@@ -34,14 +33,12 @@ class Account:
 
     
 class DebitAccount(Account):
-    def __init__(self, name, start_balance=0.0):
-        super().__init__(name)
-        self.debits = [start_balance]
-        
+    pass       
 
 class CreditAccount(Account):
-    def __init__(self, name, start_balance=0.0):
-        super().__init__(name)
+    def __init__(self, name, start_balance=0):
+        self.name = name
+        self.debits = []
         self.credits = [start_balance]
         
     @property
@@ -69,12 +66,16 @@ class Income(CreditAccount):
 class Profit(Equity):
     pass
 
+# Link account classes to text strings, allows jsons below 
 CLASS_CONSTRUCTORS = dict(assets=Asset,
                           equity=Equity,
                           liabilities=Liability,
                           expenses=Expense,
                           income=Income,
                           profit=Profit)
+
+# Account names and entry/transaction catalog are the inputs
+# These inputs can be a json
 ACCOUNT_NAMES = dict(assets=['cash', 'inventory', 'receivables'], 
                      equity=['capital'],
                      liabilities=['payables'],
@@ -86,10 +87,14 @@ OPERATIONS = {"pay in capital": ("cash", "capital"),
               "get payment": ("cash", "sales")
               } 
 
+# Model
+
 def init_accounts(account_names=ACCOUNT_NAMES,
                   constructors=CLASS_CONSTRUCTORS):
     return {v:constructors[kw](v) 
-    for kw, values in account_names.items() for v in values} 
+            for kw, values in account_names.items() for v in values} 
+
+# Controller
     
 def entry(accounts, debit_side, credit_side, amount):
     accounts[debit_side].debit(amount)
@@ -103,14 +108,16 @@ def process(accounts, event, catalog=OPERATIONS):
        
 # Reference functions 
 
-def profit(accounts):
-    return account_sum(accounts, Income) - account_sum(accounts, Expense)
-
 def account_list(accounts):
     return accounts.values()
 
 def account_list_by_type(accounts, cls):
     return [a for a in accounts.values() if isinstance(a, cls)]
+
+def combine_dicts(a, b):
+    c = a.copy()
+    c.update(b)
+    return c
 
 def to_dict(account_list):
     return {a.name:a for a in account_list}
@@ -138,97 +145,92 @@ def values(accounts):
 
 # End-of period transformations 
 
-def add_profit_account(accounts):
-    _accounts = accounts.copy()
-    p = Profit('profit', profit(_accounts))
-    _accounts['profit'] = p
-    return _accounts    
+def profit_value(accounts):
+    return account_sum(accounts, Income) - account_sum(accounts, Expense)
+
+def profit_account(accounts):
+    return Profit('profit', profit_value(accounts))    
 
 def balance_sheet(accounts):
-    return account_dict_by_type(add_profit_account(accounts), BalanceSheet)
+    result = account_dict_by_type(accounts, BalanceSheet)
+    result['profit'] = profit_account(accounts)
+    return result
 
-# Groups by keyword like 'assets', 'equity'
+# Groups of accounts
 
-def account_groups(accounts, template_dict=CLASS_CONSTRUCTORS):
-    return {kw:account_dict_by_type(accounts, cls) for kw, cls in template_dict.items()}
+def group_dict(accounts, group_names, constructors=CLASS_CONSTRUCTORS):
+    _accounts = account_list(accounts)
+    result = collections.OrderedDict([(g, []) for g in group_names])
+    for g in group_names:
+        cls = constructors.get(g)
+        for a in _accounts:
+            if isinstance(a, cls):
+                result[g].append(a)
+    return result               
 
-def account_groups_by_keyword(accounts, keywords):
-    return {kw:accounts
-            for kw, accounts in account_groups(accounts).items()
-            if kw in keywords}
-    
-def group_dict(accounts, keywords):
-    return account_groups_by_keyword(accounts, keywords)
+#  CLI tables in pure Python 
 
-# Reporting groups
+def balance_to_string(accounts):
+    b = balance_sheet(accounts)
+    a1 = group_dict(b, ["assets"])
+    a2 = group_dict(b, ["equity", "liabilities"])
+    xs = to_table_rows(a1)
+    ys = to_table_rows(a2)
+    return as_columns(list(xs), list(ys))
 
-def assets_dict(accounts):
-    return group_dict(accounts, ["assets"])
+def pl_to_string(accounts):
+    p = profit_account(accounts)
+    z = combine_dicts(accounts, {'profit':p})
+    g = group_dict(z, ['income', 'expenses', 'profit'])
+    return newlined(to_table_rows(g))
 
-def el_dict(accounts):
-    return group_dict(accounts, ["equity", "liabilities"])
+# CLI helpers: to_table_rows and as_columns
 
-def p_and_l_dict(accounts):
-    return group_dict(balance_sheet(accounts),
-                      ["income", "expenses", "profit"])
+def to_table_rows(d):
+    return as_strings(make_rows(d))
 
-#  CLI plotting
+def numeric(x):
+    return '%.1f' % (abs(x) if x == 0 else x)
 
-def fmt_value(x):
-    """Prevent -0.0 float value"""
-    return abs(x) if x == 0 else x 
+def along(a, b, padding):
+    return a + " "*padding + b
 
-def make_rows(accounts):
-    offset = "  "    
-    for key in accounts.keys():
+def newlined(lines):
+    return "\n".join(lines) 
+
+def max_width(xs):
+    return max(map(len, xs)) 
+
+def coln(rows, i):
+    return [x[i] for x in rows]
+
+def make_rows(account_groups_dict, space = "  "):
+    for key, accounts in account_groups_dict.items(): 
         yield key.capitalize(), ""
-        for k, acc in accounts[key].items():
-            yield offset+k.capitalize(), fmt_value(acc.balance)
+        for acc in accounts:
+            text =  space + acc.name.capitalize()
+            value = numeric(acc.balance)
+            yield text, value   
 
-def make_table(rows):
-    t = PrettyTable(field_names=['name','value'])
-    t.align['name']='l'
-    t.align['value']='r'
-    t.header = False
-    t.hrules = NONE
-    t.vrules = NONE
-    t.left_padding_width = 0
-    t.right_padding_width = 0
-    t.float_format=".1"
-    for row in rows:
-        t.add_row(row)
-    return t
+def as_strings(rows, padding=2):
+    rows = list(rows)
+    n1 = max_width(coln(rows, 0))
+    n2 = max_width(coln(rows, 1))
+    def fmt(row):
+        a = row[0].ljust(n1) 
+        b = row[1].rjust(n2)
+        return along(a, b, padding) 
+    return map(fmt, rows)
 
-def make_table_by_keywords(accounts, keywords):
-    return make_table(make_rows(group_dict(accounts, keywords)))
+def as_columns(xs, ys, padding = 4):
+    w1 = max_width(xs)
+    offset = lambda x: x.ljust(w1)     
+    gen = itertools.zip_longest(xs, ys, fillvalue="")
+    lines = [along(offset(x), y, padding) for x, y in gen]
+    return newlined(lines) 
 
-# CLI reports
-        
-def print_balance(accounts):
-    _accounts = balance_sheet(accounts)
-    ta = sum_credit(_accounts)
-    tp = sum_debit(_accounts)
-    a = make_table(make_rows(assets_dict(accounts)))
-    b = make_table(make_rows(el_dict(accounts)))
-    t = PrettyTable(field_names=['col1','col2'])
-    t.align['col1']='r'
-    t.align['col2']='r'
-    t.left_padding_width = 0
-    t.right_padding_width = 0
-    t.header = False
-    t.hrules = ALL
-    t.vrules = NONE 
-    t.junction_char = " "
-    t.add_row([a,b])
-    #FIXME: more formatting of the totals
-    #t.add_row(["", f'Total equity: {tp}']) 
-    t.add_row([f'Total: {ta}', f'Total: {tp}'])    
-    return t                          
 
-def print_pl(accounts):
-    raise NotImplementedError
-
-if '__main__' == __name__:            
+if '__main__' == __name__:
     accounts = init_accounts()
     events = [("pay in capital", 100.5), 
               ("buy goods", 75), 
@@ -237,17 +239,23 @@ if '__main__' == __name__:
                ]    
     for event in events: 
         process(accounts, event)
-        assert has_identity(accounts)         
-    print(values(accounts)) 
-    t = print_balance(accounts)    
-    print(t)
+        assert has_identity(accounts)
+        assert has_identity(balance_sheet(accounts))
     
     assert values(accounts) == {'capital': 100.5,
- 'cash': 85.5,
- 'cogs': 50.0,
- 'inventory': 25.0,
- 'payables': 0.0,
- 'receivables': 0.0,
- 'sales': 60.0}
-    assert profit(accounts) == 10
-    assert has_identity(accounts)
+                                'cash': 85.5,
+                                'cogs': 50.0,
+                                'inventory': 25.0,
+                                'payables': 0.0,
+                                'receivables': 0.0,
+                                'sales': 60.0}
+    assert profit_value(accounts) == 10
+    assert has_identity(accounts)    
+    assert has_identity(balance_sheet(accounts))
+
+    print("This raw balance:\n")
+    print(values(accounts)) 
+    print("\nCan be viewed as:\n")
+    print(balance_to_string(accounts))  
+    print("\nand:\n")
+    print(pl_to_string(accounts))
