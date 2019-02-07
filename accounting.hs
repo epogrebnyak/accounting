@@ -1,14 +1,15 @@
--- """Minimal double-entry accounting example with 
---    T-accounts, legder and accounting entries catalog.
--- """
--- import collections
--- import itertools 
+-- Minimal double-entry accounting example with 
+-- T-accounts, legder and accounting entries catalog.
 
 import Data.Map (fromList, alter)
 
 data Type = Asset | Expense | Equity | Liability | Income | Profit deriving Show
 data Account = Account Type [Float] [Float] deriving Show
- 
+
+-- "Multiple dispatch" / "Type inheritance"
+-- нам нужно сгруппировать конструктуоры Type в две группы, так чтобы 
+-- функция balance в одной группы выдавала debits - credits,
+-- а в другой группе credits-debits
 is_debit Asset = True
 is_debit Expense = True
 is_debit _ = False
@@ -19,6 +20,7 @@ credit x (Account t debits credits) = Account t debits (append credits x)
 balance (Account t debits credits) = s * (if is_debit t then 1 else -1)   
     where s = sum(debits) - sum(credits)  
 
+-- создание словаря (срока название счета) - сам счет.
 makeAccounts accNames = fromList $ map makeAccount accountNames  
     where makeAccount (t, name) = (name, Account t [] [])
 debit' x (Just acc) = Just (debit x acc)  
@@ -42,6 +44,10 @@ z = balance $ credit 7 (debit 10 a) -- 3
 accounts = makeAccounts accountNames 
 e = Entry "cash" "capital" 5
 accounts' = processEntry accounts e
+
+
+-- import collections
+-- import itertools 
 
 -- b = DebitAccount "abc" [] []
 -- makeDebitAccount :: String -> DebitAccount
