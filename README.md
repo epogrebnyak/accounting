@@ -171,3 +171,20 @@ Aктивы фирмы:
 ## Ссылка на colab
 
 <https://colab.research.google.com/drive/1qhPY5MVTHnW5JawC3a09PYkjA9PI7fhS>
+
+## Примеры кода других 
+
+- [100daysofpython/accounting](https://github.com/danshorstein/100daysofpython/blob/master/Days19-21/accounting/accounting.py)
+- ledger/hlegder
+- плагин для 
+
+## Уроки из кодирования 
+
+- мы делаем упрощенную и ограниченную (resticted), но тем не менее 
+  логически полную версию системы учета 
+- двойная запись сильно упрощает реализацию
+- валидация "а это праильная трансзакция" - вне системы
+- интерфейсы - дорогое удовольствие (CLI tables)   
+- как должна общать с внешним миром? как хранить информацию?
+  какие tradeoffs?
+- что в принипе отличает MWE от реальной системы?  
