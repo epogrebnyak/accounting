@@ -71,12 +71,12 @@ mutate accounts (Entry (Ref debitAccount) (Ref creditAccount) amount) =
 
 getEntry :: OperationMap -> OperationName -> Amount -> Entry 
 getEntry operationMap op amount = case Data.Map.lookup op operationMap of
-        Just (r1, r2) -> Entry r1 r2 amount
+        Just (ref1, ref2) -> Entry ref1 ref2 amount
         Nothing -> error "Wrong operation"   
 
 
 runOperation :: OperationMap -> AccountMap -> OperationName -> Amount -> AccountMap
-runOperation operationMap accountMap op amount = mutate accountMap _e
+runOperation operationMap accounts op amount = mutate accounts _e
     where _e = getEntry operationMap op amount
 
 -- операции
@@ -109,3 +109,4 @@ accounts4 = process accounts'' "pay debt" 0.2
 
 -- Далее:
 -- process a list of operations - maybe a fold! 
+-- компрессия в баланс, p&l
