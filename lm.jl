@@ -1,5 +1,4 @@
-# https://docs.julialang.org/en/v1/manual/types/index.html
-mutable struct DebitAccount
+mutable struct TAccount
     debits :: Vector # fo REadl
     credits :: Vector # fo REadl
 end
@@ -8,6 +7,8 @@ mutable struct CreditAccount
     debits :: Vector # fo REadl
     credits :: Vector # fo REadl
 end
+
+
 
 
 # function debit(acc :: TAccount)
