@@ -15,14 +15,16 @@ data Side = Debit | Credit
 
 type OperationName = String
 type AccountName = String
+-- корреспонденция счетов для проводки
 data Pair = Pair { 
     debitAccount :: AccountName, 
     creditAccount :: AccountName
     }
+-- словари    
 type Accounts = Map.Map AccountName Account
 type OperationCatalog = Map.Map OperationName Pair
 
--- типы для наглядного ввода данных 
+-- типы для наглядного ввода данных в тестах и примерах
 data Entry = Entry AccountName AccountName Amount
 data Operation = Operation OperationName Amount
 
@@ -74,6 +76,7 @@ getCorrespondence catalog name = case Data.Map.lookup name catalog of
     Nothing -> error "Wrong operation"   
 
 -- проведение проводки 
+mutate :: Accounts -> Pair -> Amount -> Accounts
 mutate accounts (Pair debitName creditName) amount = 
     сhangeWith creditName credit' $ сhangeWith debitName debit' accounts
     where 
@@ -84,7 +87,8 @@ mutate accounts (Pair debitName creditName) amount =
         -- alter f key m, where f is function, and m is map     
         сhangeWith key f account = alter f key accounts
 
--- сахар для быстрого доступа         
+-- сахар для быстрого изменения счетов         
+mut :: Accounts -> Entry -> Accounts
 mut account (Entry dacc cacc amount) = mutate accounts (Pair dacc cacc) amount
 
 -- проведелние операций 
