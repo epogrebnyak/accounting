@@ -62,6 +62,7 @@ changeByKeyWith _ _ (Left accounts) = Left accounts
 
 type ErrorMessage = String
 data Entry = Entry AccountName AccountName Amount
+
 applyEntry :: Either ErrorMessage AccountMap -> Entry -> Either ErrorMessage AccountMap
 applyEntry accountsM (Entry key1 key2 amount) = f $ g accountsM
     where 
