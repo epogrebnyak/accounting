@@ -1,7 +1,7 @@
 -- Minimal double-entry accounting system
 import Prelude hiding (lookup, Map)   
 import Data.Map (fromList, toList, alter, lookup, Map)
-import Account (Pair, Amount, AccountName, AccountMap, mutate)
+import Account (Pair(..), Amount, AccountName, AccountMap, mutate)
 import Account (accountsExample)
 
 type OperationName = String 
