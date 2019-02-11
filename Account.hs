@@ -97,12 +97,6 @@ d = debitByKey "a" 1  s
 -- Right (fromList [("a",2)])
 d' = creditByKey "q" 1 s
          
-a = Account Asset [] []
-z = balance $ credit 7 (debit 10 a) -- 3
-
-g = Account Asset [100, 20] [70]
-e = Account Equity [70] [100, 20]
-
 e1 = Entry "cash" "capital" 100
 e2 = Entry "cash" "debt" 400
 accounts1 = mut (mut accountsExample e1) e2
