@@ -1,16 +1,18 @@
 module Account where 
 
 import Prelude hiding (lookup, map)     
-import Data.Map (fromList, toList, alter, lookup, Map, map, member)
+import Data.Map (fromList, toList, adjust, lookup, Map, map, member)
 
 data Category = Asset | Expense | Equity | Liability | Income | Profit deriving (Show, Eq)
 data Side = Debit | Credit
+-- aльтернатива - https://pastebin.com/kpPD3XWU
 sumSide :: Category -> Side
 sumSide category = if category `elem` [Asset, Expense] then Debit else Credit
 type Amount = Float
 data Account = Account Category [Amount] [Amount] deriving (Show, Eq)
 type AccountName = String
 type AccountMap = Map AccountName Account
+type SafeAccountMap = Either String AccountMap 
 
 nullAccount :: Category -> Account  
 nullAccount category = Account category [] []    
@@ -24,19 +26,13 @@ debit x (Account t debits credits) = Account t (x:debits) credits
 credit :: Amount -> Account -> Account
 credit x (Account t debits credits) = Account t debits (x:credits)
 
--- рассчитываем баланс на одной или другой стороне 
+-- рассчитываем баланс на стороне дебита ил кредита 
 balance :: Account -> Amount
 balance (Account category debits credits) = case sumSide category of
     Debit -> s
     Credit -> -s 
     where s = sum(debits) - sum(credits) 
 
-accountNames = [ 
-        ("asset", ["cash", "receivable", "inventory"]),
-        ("equity", ["capital"]),
-        ("expense", ["cogs", "interest"]),
-        ("liability", ["payable", "debt"])
-        ]
 readCategory:: String -> Maybe Category
 readCategory "asset" = Just Asset 
 readCategory "equity" = Just Equity
@@ -45,43 +41,62 @@ readCategory "expense" = Just Expense
 readCategory "income" = Just Income
 readCategory _ = Nothing
 
-readTuple :: (String, [String]) -> [(AccountName, Account)]
-readTuple (categoryStr, names) = maybe [] zip' (readCategory categoryStr)
-    where zip' category = zip names (repeat (nullAccount category))
+unpackTuple :: (String, [String]) -> [(AccountName, Account)]
+unpackTuple (categoryStr, names) = case readCategory categoryStr of
+    Just category -> zip names (repeat (nullAccount category))
+    Nothing -> []
 
-readAccountsByName :: [(String, [String])] -> AccountMap
-readAccountsByName source = fromList $ concatMap readTuple source
+-- получаем иницилизированную систему пустых счетов, 
+-- где назания счетов - ключи словаря AccountMap
+unpackTuples :: [(String, [String])] -> SafeAccountMap
+unpackTuples source = Right $ fromList $ concatMap unpackTuple source
 
-accountsExample = Right $ readAccountsByName accountNames
-    
--- меняем один счет в словаре     
-changeByKeyWith name f (Right accounts) = if member name accounts 
-    then Right $ alter (fmap f) name accounts
-    else Left $ "Account name not found: " ++ name
-changeByKeyWith _ _ (Left accounts) = Left accounts
+   
+changeByKeyWith :: AccountName -> (Account -> Account) -> SafeAccountMap -> SafeAccountMap  
+changeByKeyWith key action (Right accounts) = if member key accounts 
+    then Right $ adjust action key accounts -- maybe use `update`?
+    else Left $ "Account name not found: " ++ key
+changeByKeyWith _ _ (Left message) = Left message
 
-type ErrorMessage = String
+debitByKey name amount  = changeByKeyWith name (debit amount)  
+creditByKey name amount = changeByKeyWith name (credit amount)  
+
 data Entry = Entry AccountName AccountName Amount
-
-applyEntry :: Either ErrorMessage AccountMap -> Entry -> Either ErrorMessage AccountMap
+applyEntry :: SafeAccountMap -> Entry -> SafeAccountMap
 applyEntry accountsM (Entry key1 key2 amount) = f $ g accountsM
     where 
-        f = changeByKeyWith key1 (debit amount) 
-        g = changeByKeyWith key2 (credit amount) 
-applyEntries = foldl applyEntry  
+        f = debitByKey key1 amount  
+        g = creditByKey key2 amount 
+applyEntries = foldl applyEntry
+
+-- shorthand notation 
 mut = applyEntry 
 muts = applyEntries 
+
+-- -- в Quickcheck
+balances :: SafeAccountMap -> Either String (Map AccountName Amount)
+balances = fmap (Data.Map.map balance)
+
+
+-- -- Примеры    
+accountNames = [ 
+        ("asset", ["cash", "receivable", "inventory"]),
+        ("equity", ["capital"]),
+        ("expense", ["cogs", "interest"]),
+        ("liability", ["payable", "debt"])
+        ]
+accountsExample = unpackTuples accountNames
+
 
 n = Right $ fromList([("cash", nullAccount Asset),("paid-in capital", nullAccount Equity)])
 w = applyEntry n $ Entry "cash" "paid-in capital" 10    
 
-s = Right $ fromList [("a", 1)]
-d = changeByKeyWith "a" (+1)  s
+s = Right $ fromList [("a", nullAccount Asset)]
+d = debitByKey "a" 1  s
 -- d
 -- Right (fromList [("a",2)])
-d' = changeByKeyWith "q" (+1) s
+d' = creditByKey "q" 1 s
          
--- -- Примеры    
 a = Account Asset [] []
 z = balance $ credit 7 (debit 10 a) -- 3
 
@@ -101,16 +116,8 @@ b' = muts accounts' [(Entry "cash" "capital" 100), -- взнос акционе�
 c' = Right $ fromList [("capital",Account Equity [] [50]),
                        ("cash",Account Asset [50] [])]
 
--- -- в Quickcheck
-balances :: Either ErrorMessage AccountMap -> Either ErrorMessage (Map AccountName Amount)
-balances = fmap (Data.Map.map balance)
 -- balances b' == balances c'
 -- True
-
--- -- задача 1: прочитать из accountNames словарь типа AccountMap
--- --           accountNames может приходит как JSON
--- --           В результате мы получаем иницилизированную систему пустых счетов, 
--- --           где назания счетов - ключи словаря AccountMap
 
 -- -- Data.Tree
 -- -- POSTGRES
