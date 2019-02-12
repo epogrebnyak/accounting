@@ -1,3 +1,11 @@
+-- -- TODO: перенести в тесты
+-- -- получаем Right
+-- s = asAccountMap [("a", nullAccount Asset)]
+-- d = debitByKey "a" 1  s -- Right (fromList [("a",2)])
+-- -- получаем Left
+-- d' = creditByKey "q" 1 s
+
+
 -- file SpecAccount.hs
 module SpecAccount where 
 
