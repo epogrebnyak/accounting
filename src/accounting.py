@@ -92,7 +92,8 @@ OPERATIONS = {"pay in capital": ("cash", "capital"),
 def init_accounts(account_names=ACCOUNT_NAMES,
                   constructors=CLASS_CONSTRUCTORS):
     return {v:constructors[kw](v) 
-            for kw, values in account_names.items() for v in values} 
+            for kw, values in account_names.items() 
+            for v in values} 
 
 # Controller
     

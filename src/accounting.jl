@@ -1,23 +1,19 @@
 mutable struct TAccount
-    debits :: Vector # fo REadl
-    credits :: Vector # fo REadl
+    debits :: Vector 
+    credits :: Vector
 end
 
 mutable struct CreditAccount
-    debits :: Vector # fo REadl
-    credits :: Vector # fo REadl
+    debits :: Vector 
+    credits :: Vector
 end
 
+mutable struct DebitAccount
+    debits :: Vector 
+    credits :: Vector
+end
 
-
-
-# function debit(acc :: TAccount)
-#     return sum(acc.debits) -  sum(acc.credits)
-# end
-    
-# function credit(acc :: TAccount)
-#     return -debit(acc)
-# end
+# In Julia, can one inherit types from DebitAccount and CreditAccount?
 
 function debit_sum(acc)
     return sum(acc.debits) - sum(acc.credits)
@@ -31,9 +27,6 @@ function balance(acc :: CreditAccount)
     return -debit_sum(acc)
 end  
     
-
-
-
 # struct LinearModel
 #     observed::Sample
 #     intercept::Bool
