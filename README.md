@@ -201,13 +201,21 @@ Aктивы фирмы:
 - [Accoutning Software Design Patterns](https://stackoverflow.com/a/163634/1758363)
 
 
+## Статьи о программной реализации
+
+- [SAP vs 1C](http://www.cnews.ru/articles/2016-12-09_pervoe_nastoyashchee_sravnenie_1serp_i_sap_erp)
+- [Detection of Anomalies in Large-Scale Accounting Data using Deep Autoencoder Networks](https://arxiv.org/pdf/1709.05254.pdf)
+
+- [Data mining journal entries for fraud detection: An exploratory study](https://www.sciencedirect.com/science/article/pii/S1467089510000540)
+
+- ![](https://digitalfirst.com/wp-content/uploads/2018/07/Australian-and-New-Zealand-Accounting-Software-Market-768x508.png)
+
 ## Дополнительные темы
 
 - амортизация
 - налоги
-- дивиденды
-- резервы (банки)
-
+- завершение года и дивиденды
+- резервы под потери (банки)
 
 ## Ссылка на colab
 
@@ -217,15 +225,17 @@ Aктивы фирмы:
 
 - [100daysofpython/accounting](https://github.com/danshorstein/100daysofpython/blob/master/Days19-21/accounting/accounting.py)
 - ledger/hlegder
-- плагин для 
+- плагин для django
 
 ## Уроки из кодирования 
 
 - мы делаем упрощенную и ограниченную (resticted), но тем не менее 
-  логически полную версию системы учета 
+  логически полную версию системы учета  (Minimum Working Example, MWE)
 - двойная запись сильно упрощает реализацию
-- валидация "а это праильная трансзакция" - вне системы
-- интерфейсы - дорогое удовольствие (CLI tables)   
-- как должна общать с внешним миром? как хранить информацию?
-  какие tradeoffs?
+- валидация "а это правильная ли это трансзакция?" - находится вне системы
+- интерфейсы - дорогое удовольствие (CLI tables/Views)   
+- как система должна общать с внешним миром? как хранить информацию?
 - что в принипе отличает MWE от реальной системы?  
+- роль богатой и доступной информации 
+- нужна референтная база проводок, с которой можно поработать 
+
