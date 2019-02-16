@@ -221,11 +221,12 @@ Aктивы фирмы:
 
 <https://colab.research.google.com/drive/1qhPY5MVTHnW5JawC3a09PYkjA9PI7fhS>
 
-## Примеры кода других 
+## Примеры кода  
 
 - [100daysofpython/accounting](https://github.com/danshorstein/100daysofpython/blob/master/Days19-21/accounting/accounting.py)
-- ledger/hlegder
-- плагин для django
+- [ledger/hlegder](https://github.com/simonmichael/hledger/wiki/hledger-accounting-concepts)
+- [плагин для django](https://github.com/dulacp/django-accounting)
+- [double_double](https://github.com/crftr/double_double/tree/master/lib/double_double)
 
 ## Уроки из кодирования 
 
